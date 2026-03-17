@@ -1,0 +1,64 @@
+- name: Validate AD DNS and NTDS services
+  when: validation_target == 'ad'
+  block:
+    - name: Check DNS service state
+      ansible.windows.win_service:
+        name: DNS
+      register: ad_dns_service
+
+    - name: Check NTDS service state
+      ansible.windows.win_service:
+        name: NTDS
+      register: ad_ntds_service
+
+    - name: Run DC discovery on AD server
+      ansible.windows.win_command: nltest /dsgetdc:{{ domain_name }}
+      register: ad_dc_discovery
+      changed_when: false
+
+    - name: Report AD validation results
+      ansible.builtin.debug:
+        msg:
+          - "DNS service state: {{ ad_dns_service.state }}"
+          - "NTDS service state: {{ ad_ntds_service.state }}"
+          - "DC discovery output: {{ ad_dc_discovery.stdout }}"
+
+- name: Validate client domain connectivity
+  when: validation_target == 'client'
+  block:
+    - name: Run DC discovery from client
+      ansible.windows.win_command: nltest /dsgetdc:{{ domain_name }}
+      register: client_dc_discovery
+      changed_when: false
+
+    - name: Check DNS resolution of domain from client
+      ansible.windows.win_command: nslookup {{ domain_name }} {{ ad_dns_server }}
+      register: client_dns_resolution
+      changed_when: false
+
+    - name: Report client validation results
+      ansible.builtin.debug:
+        msg:
+          - "Client DC discovery output: {{ client_dc_discovery.stdout }}"
+          - "Client DNS output: {{ client_dns_resolution.stdout }}"
+
+- name: Validate Splunk service and listener
+  when: validation_target == 'soc'
+  block:
+    - name: Check Splunk service status
+      ansible.builtin.command: /opt/splunk/bin/splunk status
+      become: true
+      become_user: "{{ splunk_service_user }}"
+      register: splunk_status
+      changed_when: false
+
+    - name: Check Splunk listener on 9997
+      ansible.builtin.shell: ss -tulpn | grep ':9997'
+      register: splunk_listener
+      changed_when: false
+
+    - name: Report Splunk validation results
+      ansible.builtin.debug:
+        msg:
+          - "Splunk status: {{ splunk_status.stdout }}"
+          - "Listener check: {{ splunk_listener.stdout }}"

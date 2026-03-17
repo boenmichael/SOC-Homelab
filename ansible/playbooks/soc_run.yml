@@ -1,0 +1,15 @@
+- name: SOC automation run (hybrid model)
+  hosts: soc
+  gather_facts: true
+  become: true
+  roles:
+    - splunk
+
+- name: SOC validation run
+  hosts: soc
+  gather_facts: false
+  become: true
+  vars:
+    validation_target: soc
+  roles:
+    - validation

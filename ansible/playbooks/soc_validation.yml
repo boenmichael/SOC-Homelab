@@ -1,0 +1,8 @@
+- name: Validate Splunk readiness
+  hosts: soc
+  gather_facts: false
+  become: true
+  vars:
+    validation_target: soc
+  roles:
+    - validation

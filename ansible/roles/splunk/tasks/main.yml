@@ -1,0 +1,85 @@
+- name: Install required Linux packages for Splunk setup
+  ansible.builtin.apt:
+    name:
+      - wget
+      - tar
+      - acl
+    state: present
+    update_cache: true
+
+- name: Download Splunk package
+  ansible.builtin.get_url:
+    url: "{{ splunk_download_url }}"
+    dest: /tmp/splunk.tgz
+    mode: "0644"
+
+- name: Extract Splunk package
+  ansible.builtin.unarchive:
+    src: /tmp/splunk.tgz
+    dest: /opt
+    remote_src: true
+    creates: /opt/splunk/bin/splunk
+
+- name: Ensure dedicated Splunk service user exists
+  ansible.builtin.user:
+    name: "{{ splunk_service_user }}"
+    system: true
+    shell: /usr/sbin/nologin
+
+- name: Ensure Splunk install directory ownership
+  ansible.builtin.file:
+    path: /opt/splunk
+    owner: "{{ splunk_service_user }}"
+    group: "{{ splunk_service_user }}"
+    recurse: true
+
+- name: Check Splunk admin password marker
+  ansible.builtin.stat:
+    path: /opt/splunk/.admin_password_set
+  register: splunk_password_marker
+
+- name: Seed Splunk admin password for first start
+  ansible.builtin.copy:
+    dest: /opt/splunk/etc/system/local/user-seed.conf
+    owner: "{{ splunk_service_user }}"
+    group: "{{ splunk_service_user }}"
+    mode: "0600"
+    content: |
+      [user_info]
+      USERNAME = admin
+      PASSWORD = {{ splunk_admin_password }}
+  when: not splunk_password_marker.stat.exists
+
+- name: Start Splunk and accept license
+  ansible.builtin.command: /opt/splunk/bin/splunk start --accept-license --answer-yes --no-prompt
+  become: true
+  become_user: "{{ splunk_service_user }}"
+  args:
+    creates: /opt/splunk/var/log/splunk/splunkd.log
+
+- name: Create Splunk admin password marker
+  ansible.builtin.file:
+    path: /opt/splunk/.admin_password_set
+    state: touch
+    owner: "{{ splunk_service_user }}"
+    group: "{{ splunk_service_user }}"
+    mode: "0600"
+  when: not splunk_password_marker.stat.exists
+
+- name: Enable Splunk boot start
+  ansible.builtin.command: /opt/splunk/bin/splunk enable boot-start -user {{ splunk_service_user }}
+
+- name: Configure Splunk TCP input listener
+  ansible.builtin.copy:
+    dest: /opt/splunk/etc/system/local/inputs.conf
+    owner: "{{ splunk_service_user }}"
+    group: "{{ splunk_service_user }}"
+    mode: "0644"
+    content: |
+      [splunktcp://9997]
+      disabled = 0
+
+- name: Restart Splunk service
+  ansible.builtin.command: /opt/splunk/bin/splunk restart
+  become: true
+  become_user: "{{ splunk_service_user }}"

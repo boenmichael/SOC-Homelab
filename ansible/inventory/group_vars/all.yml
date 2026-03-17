@@ -1,0 +1,15 @@
+domain_name: corp.local
+ad_dns_server: 10.10.2.4
+
+domain_admin_user: CORP\azureuser
+domain_admin_password: YkyjsCuT1N1V
+ad_safe_mode_password: kcrfEc9pkGt8
+
+splunk_download_url: https://download.splunk.com/products/splunk/releases/10.2.1/linux/splunk-10.2.1-c892b66d163d-linux-amd64.tgz
+splunk_server_ip: 10.10.1.4
+splunk_forwarder_download_url: https://download.splunk.com/products/universalforwarder/releases/10.2.0/windows/splunkforwarder-10.2.0-d749cb17ea65-windows-x64.msi
+
+splunk_service_user: splunk
+splunk_web_username: admin
+splunk_admin_password: 5kaX3uXGFyHB
+attack_sim_dir: C:\AttackSim

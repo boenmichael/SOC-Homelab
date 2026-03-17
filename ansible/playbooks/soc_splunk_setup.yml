@@ -1,0 +1,6 @@
+- name: Install and configure Splunk on SOC VM
+  hosts: soc
+  gather_facts: true
+  become: true
+  roles:
+    - splunk
