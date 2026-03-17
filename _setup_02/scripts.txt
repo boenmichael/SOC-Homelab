@@ -1,0 +1,71 @@
+Stage 1
+
+terraform plan -out tfplan-stage1 \
+  -target=azurerm_resource_group.this \
+  -target=azurerm_virtual_network.this \
+  -target=azurerm_subnet.soc_subnet \
+  -target=azurerm_subnet.ad_subnet \
+  -target=azurerm_subnet.client_subnet \
+  -target=azurerm_subnet.bastion_subnet \
+  -target=azurerm_public_ip.bastion_pip \
+  -target=azurerm_bastion_host.this \
+  -target=azurerm_network_security_group.soc_nsg \
+  -target=azurerm_network_security_group.ad_nsg \
+  -target=azurerm_network_security_group.client_nsg \
+  -target=azurerm_subnet_network_security_group_association.soc_assoc \
+  -target=azurerm_subnet_network_security_group_association.ad_assoc \
+  -target=azurerm_subnet_network_security_group_association.client_assoc \
+  -target=azurerm_network_interface.splunk_nic \
+  -target=azurerm_network_interface.ad_nic \
+  -target=azurerm_network_interface.client_nic \
+  -target=azurerm_linux_virtual_machine.splunk_vm \
+  -target=azurerm_windows_virtual_machine.ad_vm \
+  -target=azurerm_windows_virtual_machine.client_vm
+
+terraform apply tfplan-stage1
+
+---
+
+Stage 2
+
+terraform plan -out tfplan-stage2 \
+  -target=azurerm_virtual_machine_extension.ad_ds_install \
+  -target=azurerm_virtual_machine_extension.client_domain_join
+
+terraform apply tfplan-stage2
+
+---
+
+Stage 3
+
+terraform plan -out tfplan-stage3 \
+  -target=azurerm_virtual_machine_extension.splunk_install \
+  -target=azurerm_virtual_machine_extension.ad_forwarder_install \
+  -target=azurerm_virtual_machine_extension.client_forwarder_install \
+  -target=azurerm_virtual_machine_extension.client_attack_sim_setup
+
+terraform apply tfplan-stage3
+
+---
+
+Stage 4 | Final full convergance
+
+terraform plan -out tfplan-final
+terraform apply tfplan-final
+
+---
+
+Stage 5 | Outputs
+
+terraform output
+
+
+----
+Error: creating/updating Extension (Subscription: "f6a02082-764b-47b5-94e3-0520f8196ece"
+│ Resource Group Name: "SOC-LAB-FR"
+│ Virtual Machine Name: "vm-client"
+│ Extension Name: "client-domain-join"): polling after CreateOrUpdate: polling failed: the Azure API returned the following error:
+│ 
+│ Status: "VMExtensionProvisioningError"
+│ Code: ""
+│ Message: "VM has reported a user failure when processing extension 'client-domain-join'. Please correct the error and try again. (publisher 'Microsoft.Compute' and type 'JsonADDomainExtension'). Error code: '2'. Error message: 'Join failed for Domain 'corp.local'. More information: An Active Directory Controller for the domain could not be contacted. Check the network connectivity between the client and the Domain controller.\r\n\r\nVerify if the Preferred DNS Server is the correct DNS Server.\r\n\r\nRun nltest /dsgetdc (DC Discovery) to verify if you can discover a DC
